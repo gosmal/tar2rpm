@@ -48,6 +48,97 @@
 # ====================================================================
 
 
+: <<=cut
+=pod
+
+=head1 NAME
+
+   tar2rpm - create rpmfile from a tarfile
+
+=head1 SYNOPSIS
+
+tar2rpm [-n] [-v] [-k] [-p buildprefix]
+
+tar2rpm [--ver N.N] [--rel N] [--arch noarch/x86_64/i586]
+
+tar2rpm [--sign] [--packager Packager] 
+
+tar2rpm [--dependfile file-with-depends]
+
+tar2rpm [--dirs file-with-list-of-directories]
+
+tar2rpm [--pre file] [--post file] [--preun file] [--postun file]
+
+tar2rpm [--defusr USER] [--defgrp GROUP]
+
+tar2rpm --name RPMNAME tarfile
+
+=head1 DESCRIPTION
+
+tar2rpm creates a rpm from a tarfile. The tarfile is allowed to be compresed with gzip.
+If the argument tarfile is a directory tar2rpm assumes that this a location 
+with a directory tree to create the rpm. The directory should contain
+a filetree from root.
+
+The following parameter/options are required :
+
+--name    RPMNAME the name of the rpm to create
+
+tarfile           the tarfile to create the rpm from
+
+The following parameter/options is accepted :
+
+-n                Dry run 
+
+-v                Run in verbose mode
+
+-k                Keep the specfile and rpmbuild directory
+
+-p        buildprefix  Specify the rpmbuild directory
+
+--ver     N.N     version number
+
+--rel     N       release number
+
+--arch    noarch/x86_64/i586 rpm architecture
+
+--sign            Sign with PGP
+
+--packager NAME   Builder name
+
+--dependfile file-with-depends provide a section of dependencies
+
+--dirs file-with-list-of-directories file with directories the packet shall own
+
+--pre     file    provide a script run before the installation
+
+--post    file    provide a script run after the installation
+
+--preun   file    provide a script run before the uninstallation
+
+--postun  file    provide a script run after the uninstallation
+
+--defusr  USER    defaultuser
+
+--defgrp  USER    defaultgroup
+
+=head2 Requirements
+
+This program need rpmbuild to do its work.
+
+
+=head1 LICENSE
+
+Copyright only
+
+
+=head1 AUTHOR
+
+Gosta Malmstrom 
+
+
+=cut
+
 die()
 {
     test -n "$*" && echo $* >&2
@@ -55,7 +146,7 @@ die()
 }
 
 
-USAGE="tar2rpm: usage: tar2rpm [-n] [-v] [-k] --name RPMNAME [--ver N.N] [--rel N] [--arch noarch/x86_64/i586] [--sign] [--packager Packager] [--dependfile file-with-depends] [--dirs file-with-list-of-directories] [--pre file] [--post file] [--preun file] [--postun file] [--defusr USER] [--defgrp GROUP] tarfile|directory"
+USAGE="tar2rpm: usage: tar2rpm [-n] [-v] [-k] [-p buildprefix] --name RPMNAME [--ver N.N] [--rel N] [--arch noarch/x86_64/i586] [--sign] [--packager Packager] [--dependfile file-with-depends] [--dirs file-with-list-of-directories] [--pre file] [--post file] [--preun file] [--postun file] [--defusr USER] [--defgrp GROUP] tarfile|directory"
 
 #
 # Parse parameters
@@ -63,6 +154,7 @@ USAGE="tar2rpm: usage: tar2rpm [-n] [-v] [-k] --name RPMNAME [--ver N.N] [--rel 
 
 DRYRUN=false
 VERBOSE=false
+BUILDPREFIX=/tmp/tar2rpm.$$
 KEEP=false
 SIGN=""
 PACKAGER="Config Manager<user.fullname@gmail.com>"
@@ -87,6 +179,7 @@ do
 	-n)	shift; DRYRUN=true ;;
 	-v)	shift; VERBOSE=true ;;
 	-k)	shift; KEEP=true ;;
+	-p)     shift; BUILDPREFIX=$1; shift;;
 	--sign)	shift; SIGN="--sign" ;;
 	--name) shift; NAME=$1; shift;;
 	--ver)  shift; VER=$1; shift;;
@@ -129,19 +222,21 @@ if [ ! -f "${SOURCEDATA}" ] ; then
     fi
 fi
 
-export BLDTOP=/tmp/tar2rpm.$$
-export RPMSPEC=/tmp/tar2rpm.spec.$$
+export BLDTOP=$BUILDPREFIX
+export RPMSPEC=$BUILDPREFIX.spec
 
-if $KEEP ; then
-    export BLDTOP=/tmp/tar2rpm
-    export RPMSPEC=/tmp/tar2rpm.spec
-    rm -f $RPMSPEC
-    rm -rf $BLDTOP
-else
+if ! $KEEP ; then
     trap "rm -f $RPMSPEC; rm -rf $BLDTOP" 0
 fi
 
 test -n "$NAME"    || die No \$NAME
+
+OPT_V=""
+OUTPUT=""
+if $VERBOSE ; then
+    OPT_V="-v"
+    OUTPUT=">/dev/null"
+fi
 
 set -e
 
@@ -156,7 +251,7 @@ mkdir -p $UNPACKROOT
 if $SOURCEISDIR ; then
     (
 	cd ${SOURCEDATA}
-	find . -type f | cpio -pduvm $UNPACKROOT
+	find . -type f | cpio $OPT_V -pdum $UNPACKROOT 
     )
 else
     RUNGZIP=cat
@@ -216,9 +311,9 @@ This package is automatically built by tar2rpm.
 %build
 
 %install
-cd %{_builddir}/BUILDROOT/unpack ; find * | cpio -pdum  %{?buildroot}
+cd %{_builddir}/BUILDROOT/unpack ; find * | cpio $OPT_V -pdum  %{?buildroot} $OUTPUT
 
-# Dissable all helpers in install
+# Disable all helpers in install
 unset RPM_BUILD_ROOT
 
 %clean
@@ -237,7 +332,7 @@ EOF
 if [ -n "$DIRSFILE" ] ; then
     cat $DIRSFILE | awk '/^[ 	]*$/ {next;} /^[ 	]*#/ {next;} 
 		/^[ 	]*%/ {print; next;}
-	        {printf "%%dir %s\n",$1}
+	        {printf "%%dir %s\n",$NF}
 		END {printf("\n");}' >> $RPMSPEC 
 fi
 
@@ -285,7 +380,7 @@ cat <<EOF >> $RPMSPEC
 EOF
 
 RPMBUILDOPTS=""
-if "$VERBOSE" ; then
+if $VERBOSE ; then
     cat $RPMSPEC
 else
     RPMBUILDOPTS="--quiet"

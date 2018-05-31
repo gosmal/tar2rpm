@@ -1,7 +1,7 @@
-#!/bin/sh
+#!/bin/bash
 # ####################################################################
 #
-#       ID         : $Id: tar2rpm.sh,v 1.7 2018/05/28 15:15:29 gosta Exp $
+#       ID         : $Id: tar2rpm.sh,v 1.10 2018/05/31 13:11:58 gosta Exp $
 #       Written by : Gosta Malmstrom
 # 
 #       Comments:
@@ -57,7 +57,7 @@
 
 =head1 SYNOPSIS
 
-tar2rpm [-n] [-v] [-k] [-p buildprefix]
+tar2rpm [-n] [-v] [-k] [-p buildprefix] [-s specfilename]
 
 tar2rpm [--ver N.N] [--rel N] [--arch noarch/x86_64/i586]
 
@@ -95,6 +95,8 @@ The following parameter/options is accepted :
 -k                Keep the specfile and rpmbuild directory
 
 -p        buildprefix  Specify the rpmbuild directory
+
+-s        NAME    Specify the specfile name
 
 --ver     N.N     version number
 
@@ -146,7 +148,7 @@ die()
 }
 
 
-USAGE="tar2rpm: usage: tar2rpm [-n] [-v] [-k] [-p buildprefix] --name RPMNAME [--ver N.N] [--rel N] [--arch noarch/x86_64/i586] [--sign] [--packager Packager] [--dependfile file-with-depends] [--dirs file-with-list-of-directories] [--pre file] [--post file] [--preun file] [--postun file] [--defusr USER] [--defgrp GROUP] tarfile|directory"
+USAGE="tar2rpm: usage: tar2rpm [-n] [-v] [-k] [-p buildprefix] [-s specfilename] --name RPMNAME [--ver N.N] [--rel N] [--arch noarch/x86_64/i586] [--sign] [--packager Packager] [--dependfile file-with-depends] [--dirs file-with-list-of-directories] [--pre file] [--post file] [--preun file] [--postun file] [--defusr USER] [--defgrp GROUP] tarfile|directory"
 
 #
 # Parse parameters
@@ -155,6 +157,7 @@ USAGE="tar2rpm: usage: tar2rpm [-n] [-v] [-k] [-p buildprefix] --name RPMNAME [-
 DRYRUN=false
 VERBOSE=false
 BUILDPREFIX=/tmp/tar2rpm.$$
+SPECFILENAME=""
 KEEP=false
 SIGN=""
 PACKAGER="Config Manager<user.fullname@gmail.com>"
@@ -180,6 +183,7 @@ do
 	-v)	shift; VERBOSE=true ;;
 	-k)	shift; KEEP=true ;;
 	-p)     shift; BUILDPREFIX=$1; shift;;
+	-s)     shift; SPECFILENAME=$1; shift;;
 	--sign)	shift; SIGN="--sign" ;;
 	--name) shift; NAME=$1; shift;;
 	--ver)  shift; VER=$1; shift;;
@@ -223,7 +227,16 @@ if [ ! -f "${SOURCEDATA}" ] ; then
 fi
 
 export BLDTOP=$BUILDPREFIX
-export RPMSPEC=$BUILDPREFIX.spec
+UNPACKROOT=$BLDTOP/BUILDROOT/unpack
+
+if [ -d $UNPACKROOT ] ; then
+    die "Target dir : $UNPACKROOT exist"
+fi
+
+export RPMSPEC=${BUILDPREFIX}${NAME}.spec
+if [ -n "$SPECFILENAME" ] ; then
+    export RPMSPEC=$SPECFILENAME
+fi
 
 if ! $KEEP ; then
     trap "rm -f $RPMSPEC; rm -rf $BLDTOP" 0
@@ -232,10 +245,10 @@ fi
 test -n "$NAME"    || die No \$NAME
 
 OPT_V=""
-OUTPUT=""
+OUTPUT="2> /dev/null"
 if $VERBOSE ; then
     OPT_V="-v"
-    OUTPUT=">/dev/null"
+    OUTPUT=""
 fi
 
 set -e
@@ -244,14 +257,12 @@ set -e
 # First build a file tree to create the rpm from
 #
 
-UNPACKROOT=$BLDTOP/BUILDROOT/unpack
-
 mkdir -p $UNPACKROOT
 
 if $SOURCEISDIR ; then
     (
 	cd ${SOURCEDATA}
-	find . -type f | cpio $OPT_V -pdum $UNPACKROOT 
+	find . -type f | cpio $OPT_V -pdum $UNPACKROOT 2> /dev/null
     )
 else
     RUNGZIP=cat
@@ -314,7 +325,7 @@ This package is automatically built by tar2rpm.
 cd %{_builddir}/BUILDROOT/unpack ; find * | cpio $OPT_V -pdum  %{?buildroot} $OUTPUT
 
 # Disable all helpers in install
-unset RPM_BUILD_ROOT
+#unset RPM_BUILD_ROOT
 
 %clean
 

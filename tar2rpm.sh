@@ -1,7 +1,7 @@
 #!/bin/bash
 # ####################################################################
 #
-#       ID         : $Id: tar2rpm.sh,v 1.10 2018/05/31 13:11:58 gosta Exp $
+#       ID         : $Id: tar2rpm.sh,v 1.11 2018/05/31 15:22:07 gosta Exp $
 #       Written by : Gosta Malmstrom
 # 
 #       Comments:
@@ -227,7 +227,7 @@ if [ ! -f "${SOURCEDATA}" ] ; then
 fi
 
 export BLDTOP=$BUILDPREFIX
-UNPACKROOT=$BLDTOP/BUILDROOT/unpack
+UNPACKROOT=$BLDTOP/BUILDROOT/${NAME}
 
 if [ -d $UNPACKROOT ] ; then
     die "Target dir : $UNPACKROOT exist"
@@ -322,12 +322,14 @@ This package is automatically built by tar2rpm.
 %build
 
 %install
-cd %{_builddir}/BUILDROOT/unpack ; find * | cpio $OPT_V -pdum  %{?buildroot} $OUTPUT
+cd %{_builddir}/BUILDROOT/${NAME} ; find * | cpio $OPT_V -pdum  %{?buildroot} $OUTPUT
 
 # Disable all helpers in install
 #unset RPM_BUILD_ROOT
 
 %clean
+
+rm -rf %{?buildroot}
 
 %files
 %defattr(-,$DEFUSR,$DEFGRP)

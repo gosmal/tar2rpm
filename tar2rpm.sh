@@ -1,7 +1,7 @@
 #!/bin/bash
 # ####################################################################
 #
-#       ID         : $Id: tar2rpm.sh,v 1.12 2018/06/18 12:31:18 gosta Exp $
+#       ID         : $Id: tar2rpm.sh,v 1.14 2018/06/18 15:04:17 gosta Exp $
 #       Written by : Gosta Malmstrom
 # 
 #       Comments:
@@ -178,7 +178,7 @@ POSTUNSCRIPT=""
 
 while [ $# -ne 0 ] 
 do
-        case $1 in
+        case "$1" in
 	-n)	shift; DRYRUN=true ;;
 	-v)	shift; VERBOSE=true ;;
 	-k)	shift; KEEP=true ;;
@@ -242,7 +242,7 @@ if ! $KEEP ; then
     trap "rm -f $RPMSPEC; rm -rf $BLDTOP" 0
 fi
 
-test -n "$NAME"    || die No \$NAME
+test -n "$NAME" || die No \$NAME
 
 OPT_V=""
 OUTPUT="2> /dev/null"
@@ -265,7 +265,7 @@ if "$SOURCEISDIR" ; then
 	find . -type f | cpio $OPT_V -pdum "$UNPACKROOT" 2> /dev/null
     )
 else
-    RUNGZIP=cat
+    RUNGZIP="cat"
     if expr "${SOURCEDATA}" : '.*gz' > /dev/null ; then
 	RUNGZIP=gunzip
     fi
@@ -403,18 +403,20 @@ fi
 # Create the rpm
 #
 
+RET=0
 if ! $DRYRUN ; then
     rpmbuild -bb $SIGN $RPMBUILDOPTS \
 	--define="_topdir $BLDTOP" \
 	--define="_builddir $BLDTOP" \
 	--define="_rpmdir $PWD" "$RPMSPEC"
+    RET=$?
 fi
 
 if $KEEP ; then
     echo "Specfile : $RPMSPEC"
     echo "Buildtop : $BLDTOP"
     echo "Buildcmd :"
-    echo rpmbuild -bb $SIGN \
+    echo rpmbuild -bb "$SIGN" \
 	 "'--define=_topdir $BLDTOP'" \
 	 "'--define=_builddir $BLDTOP'" \
 	 "'--define=_rpmdir $PWD'" "$RPMSPEC"
@@ -422,3 +424,5 @@ else
     rm "$RPMSPEC"
     rm -rf "$BLDTOP"
 fi
+
+exit $RET

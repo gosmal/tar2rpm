@@ -1,7 +1,7 @@
 #!/bin/bash
 # ####################################################################
 #
-#       ID         : $Id: tar2rpm.sh,v 1.11 2018/05/31 15:22:07 gosta Exp $
+#       ID         : $Id: tar2rpm.sh,v 1.12 2018/06/18 12:31:18 gosta Exp $
 #       Written by : Gosta Malmstrom
 # 
 #       Comments:
@@ -143,7 +143,7 @@ Gosta Malmstrom
 
 die()
 {
-    test -n "$*" && echo $* >&2
+    test -n "$*" && echo "$*" >&2
     exit 1
 }
 
@@ -229,7 +229,7 @@ fi
 export BLDTOP=$BUILDPREFIX
 UNPACKROOT=$BLDTOP/BUILDROOT/${NAME}
 
-if [ -d $UNPACKROOT ] ; then
+if [ -d "$UNPACKROOT" ] ; then
     die "Target dir : $UNPACKROOT exist"
 fi
 
@@ -257,12 +257,12 @@ set -e
 # First build a file tree to create the rpm from
 #
 
-mkdir -p $UNPACKROOT
+mkdir -p "$UNPACKROOT"
 
-if $SOURCEISDIR ; then
+if "$SOURCEISDIR" ; then
     (
-	cd ${SOURCEDATA}
-	find . -type f | cpio $OPT_V -pdum $UNPACKROOT 2> /dev/null
+	cd "${SOURCEDATA}"
+	find . -type f | cpio $OPT_V -pdum "$UNPACKROOT" 2> /dev/null
     )
 else
     RUNGZIP=cat
@@ -270,19 +270,19 @@ else
 	RUNGZIP=gunzip
     fi
 
-    ${RUNGZIP} < ${SOURCEDATA} | (cd $UNPACKROOT; tar xf -;)
+    ${RUNGZIP} < "${SOURCEDATA}" | (cd "$UNPACKROOT"; tar xf -;)
 fi
 
 if [ -n "$DIRSFILE" ] ; then
     if [ -f "$DIRSFILE" ] ; then
-	cat $DIRSFILE | 
+	cat "$DIRSFILE" | 
 	(
-	    cd ${UNPACKROOT}
+	    cd "${UNPACKROOT}"
 	    awk '/^[ 	]*$/ {next;} /^[ 	]*#/ {next;} 
 	    		{printf "mkdir -p ./%s\n",$NF}' | sh
 	)
     else
-        die Missing --dirs $DIRSFILE file
+        die Missing --dirs "$DIRSFILE" file
     fi
 fi
 
@@ -290,7 +290,7 @@ fi
 #
 # Now echo the rpmspec file
 #
-cat <<EOF > $RPMSPEC 
+cat <<EOF > "$RPMSPEC" 
 Name: ${NAME}
 Summary: Tools/API for Linux
 Version: ${VER}
@@ -303,12 +303,12 @@ BuildRoot: $BLDTOP/BUILDROOT
 EOF
 if [ -n "$DEPENDFILE" ] ; then
     if [ -f "$DEPENDFILE" ] ; then
-	cat $DEPENDFILE >> $RPMSPEC 
+	cat "$DEPENDFILE" >> "$RPMSPEC" 
     else
-        die Missing --dependfile $DEPENDFILE file
+        die Missing --dependfile "$DEPENDFILE" file
     fi
 fi
-cat <<EOF >> $RPMSPEC 
+cat <<EOF >> "$RPMSPEC" 
 
 Distribution: None
 Vendor: Snake oil INC
@@ -337,55 +337,55 @@ rm -rf %{?buildroot}
 EOF
 
 (
-    cd $UNPACKROOT
+    cd "$UNPACKROOT"
     find . -type f -print | sed 's/\.//'
     echo
-) >> $RPMSPEC 
+) >> "$RPMSPEC"
 
 if [ -n "$DIRSFILE" ] ; then
-    cat $DIRSFILE | awk '/^[ 	]*$/ {next;} /^[ 	]*#/ {next;} 
+    cat "$DIRSFILE" | awk '/^[ 	]*$/ {next;} /^[ 	]*#/ {next;} 
 		/^[ 	]*%/ {print; next;}
 	        {printf "%%dir %s\n",$NF}
-		END {printf("\n");}' >> $RPMSPEC 
+		END {printf("\n");}' >> "$RPMSPEC"
 fi
 
 if [ -n "$PRESCRIPT" ] ; then
     if [ -f "$PRESCRIPT" ] ; then
-	echo "%pre" >> $RPMSPEC 
-	cat $PRESCRIPT >> $RPMSPEC 
+	echo "%pre" >> "$RPMSPEC" 
+	cat "$PRESCRIPT" >> "$RPMSPEC" 
     else
-        die Missing --pre $PRESCRIPT file
+        die Missing --pre "$PRESCRIPT" file
     fi
 fi
 
 if [ -n "$POSTSCRIPT" ] ; then
     if [ -f "$POSTSCRIPT" ] ; then
-	echo "%post" >> $RPMSPEC 
-	cat $POSTSCRIPT >> $RPMSPEC 
+	echo "%post" >> "$RPMSPEC" 
+	cat "$POSTSCRIPT" >> "$RPMSPEC" 
     else
-        die Missing --post $POST file
+        die Missing --post "$POST" file
     fi
 fi
 
 if [ -n "$PREUNSCRIPT" ] ; then
     if [ -f "$PREUNSCRIPT" ] ; then
-	echo "%preun" >> $RPMSPEC 
-	cat $PREUNSCRIPT >> $RPMSPEC 
+	echo "%preun" >> "$RPMSPEC" 
+	cat "$PREUNSCRIPT" >> "$RPMSPEC" 
     else
-        die Missing --preun $PREUNSCRIPT file
+        die Missing --preun "$PREUNSCRIPT" file
     fi
 fi
 
 if [ -n "$POSTUNSCRIPT" ] ; then
     if [ -f "$POSTUNSCRIPT" ] ; then
-	echo "%postun" >> $RPMSPEC 
-	cat $POSTUNSCRIPT >> $RPMSPEC 
+	echo "%postun" >> "$RPMSPEC" 
+	cat "$POSTUNSCRIPT" >> "$RPMSPEC" 
     else
-        die Missing --postun $POSTUNSCRIPT file
+        die Missing --postun "$POSTUNSCRIPT" file
     fi
 fi
 
-cat <<EOF >> $RPMSPEC 
+cat <<EOF >> "$RPMSPEC" 
 
 %changelog
 * Wed Jan 1 2014 $PACKAGER ${VER}-${REL}
@@ -394,7 +394,7 @@ EOF
 
 RPMBUILDOPTS=""
 if $VERBOSE ; then
-    cat $RPMSPEC
+    cat "$RPMSPEC"
 else
     RPMBUILDOPTS="--quiet"
 fi    
@@ -407,7 +407,7 @@ if ! $DRYRUN ; then
     rpmbuild -bb $SIGN $RPMBUILDOPTS \
 	--define="_topdir $BLDTOP" \
 	--define="_builddir $BLDTOP" \
-	--define="_rpmdir $PWD" $RPMSPEC
+	--define="_rpmdir $PWD" "$RPMSPEC"
 fi
 
 if $KEEP ; then
@@ -417,8 +417,8 @@ if $KEEP ; then
     echo rpmbuild -bb $SIGN \
 	 "'--define=_topdir $BLDTOP'" \
 	 "'--define=_builddir $BLDTOP'" \
-	 "'--define=_rpmdir $PWD'" $RPMSPEC
+	 "'--define=_rpmdir $PWD'" "$RPMSPEC"
 else
-    rm $RPMSPEC
-    rm -rf $BLDTOP
+    rm "$RPMSPEC"
+    rm -rf "$BLDTOP"
 fi

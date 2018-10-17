@@ -1,7 +1,7 @@
 #!/bin/bash
 # ####################################################################
 #
-#       ID         : $Id: tar2rpm.sh,v 1.14 2018/06/18 15:04:17 gosta Exp $
+#       ID         : $Id: tar2rpm.sh,v 1.15 2018/10/17 11:24:09 gosta Exp $
 #       Written by : Gosta Malmstrom
 # 
 #       Comments:
@@ -147,6 +147,14 @@ die()
     exit 1
 }
 
+cleanup()
+{
+    if ! $KEEP ; then
+	test -n "$RPMSPEC" && rm -f "$RPMSPEC"
+	test -n "$BLDTOP" && rm -rf "$BLDTOP"
+    fi
+    
+}
 
 USAGE="tar2rpm: usage: tar2rpm [-n] [-v] [-k] [-p buildprefix] [-s specfilename] --name RPMNAME [--ver N.N] [--rel N] [--arch noarch/x86_64/i586] [--sign] [--packager Packager] [--dependfile file-with-depends] [--dirs file-with-list-of-directories] [--pre file] [--post file] [--preun file] [--postun file] [--defusr USER] [--defgrp GROUP] tarfile|directory"
 
@@ -238,9 +246,7 @@ if [ -n "$SPECFILENAME" ] ; then
     export RPMSPEC=$SPECFILENAME
 fi
 
-if ! $KEEP ; then
-    trap "rm -f $RPMSPEC; rm -rf $BLDTOP" 0
-fi
+trap cleanup 0
 
 test -n "$NAME" || die No \$NAME
 
@@ -405,11 +411,15 @@ fi
 
 RET=0
 if ! $DRYRUN ; then
+    set +e
     rpmbuild -bb $SIGN $RPMBUILDOPTS \
 	--define="_topdir $BLDTOP" \
 	--define="_builddir $BLDTOP" \
 	--define="_rpmdir $PWD" "$RPMSPEC"
     RET=$?
+    if test $RET != 0 ; then
+	KEEP=true
+    fi
 fi
 
 if $KEEP ; then

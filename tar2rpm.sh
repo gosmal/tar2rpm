@@ -1,7 +1,7 @@
 #!/bin/bash
 # ####################################################################
 #
-#       ID         : $Id: tar2rpm.sh,v 1.15 2018/10/17 11:24:09 gosta Exp $
+#       ID         : $Id: tar2rpm.sh,v 1.16 2019/02/28 16:48:49 gosta Exp $
 #       Written by : Gosta Malmstrom
 # 
 #       Comments:
@@ -284,7 +284,7 @@ if [ -n "$DIRSFILE" ] ; then
 	cat "$DIRSFILE" | 
 	(
 	    cd "${UNPACKROOT}"
-	    awk '/^[ 	]*$/ {next;} /^[ 	]*#/ {next;} 
+	    awk '/^[ 	]*$/ {next;} /^[ 	]*#/ {next;} /^[ 	]*%/ {next;}  
 	    		{printf "mkdir -p ./%s\n",$NF}' | sh
 	)
     else

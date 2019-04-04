@@ -4,7 +4,7 @@
 #       ID         : $Id: tar2rpm.sh,v 1.16 2019/02/28 16:48:49 gosta Exp $
 #       Written by : Gosta Malmstrom
 # 
-#       Comments: Test
+#       Comments:
 # 
 # ####################################################################
 

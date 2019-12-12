@@ -136,8 +136,10 @@ RPMFILE=$1
 
 trap cleanup 0
 
+STDERR="/dev/null"
 if $VERBOSE ; then
-    set -x
+#    set -x
+    STDERR="/dev/tty"
 fi
 
 set -e
@@ -149,10 +151,14 @@ set -e
 mkdir -p "$UNPACKDIR/root"
 (
    cd "$UNPACKDIR/root" >/dev/null 2>&1
-   rpm2cpio | cpio -iducm
+   rpm2cpio | cpio -iducm 2>$STDERR
 ) < "$RPMFILE"
 
-rpm -ql "$RPMFILE" |
+QF='%{NAME}:\n[%{FILEMODES:perms} %-6{FILEUSERNAME} %-6{FILEGROUPNAME} %7{FILESIZES} %{FILEMTIMES:date} %{FILENAMES}\n]\n'
+
+rpm -q --queryformat "$QF" -p "$RPMFILE" > "$UNPACKDIR/file-list" 2>$STDERR 
+
+rpm -ql -p "$RPMFILE" 2>$STDERR |
 (
    cd "$UNPACKDIR/root" >/dev/null 2>&1
    while read -e -r d ; do
@@ -160,15 +166,18 @@ rpm -ql "$RPMFILE" |
    done > ../dirs
 )
 
-rpm -q --requires "$RPMFILE" | sort -u |
+rpm -q --requires -p "$RPMFILE" 2>$STDERR | sort -u |
     awk '{printf("Requires: %s\n",$0);}' > "$UNPACKDIR/requires"
 
-rpm -q --provides "$RPMFILE" | sort -u |
+rpm -q --provides -p "$RPMFILE" 2>$STDERR | sort -u |
     awk '{printf("Provides: %s\n",$0);}' > "$UNPACKDIR/provides"
 
-rpm -qi "$RPMFILE" > "$UNPACKDIR/info"
+rpm -qi -p "$RPMFILE" > "$UNPACKDIR/info" 2>$STDERR 
 
-rpm -q --scripts "$RPMFILE" |
+rpm -q --changelog -p "$RPMFILE" > "$UNPACKDIR/changelog" 2>$STDERR
+test ! -s "$UNPACKDIR/changelog" && rm -f "$UNPACKDIR/changelog" 
+
+rpm -q --scripts -p "$RPMFILE" 2>$STDERR |
     (
 	cd "$UNPACKDIR" >/dev/null 2>&1
 	awk '

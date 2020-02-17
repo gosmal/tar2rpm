@@ -1,6 +1,6 @@
-.PHONY : all tar rpm clean 
+.PHONY : all tar rpm clean
 
-all : 
+all :
 	@echo "make rpm ?"
 
 tar2rpm.1 : tar2rpm.sh
@@ -25,10 +25,7 @@ rpm : tar
 
 
 clean :
-	rm -rf i586 i386 x86_64 noarch 
+	rm -rf i586 i386 x86_64 noarch
 	rm -f tar2rpm.tar.gz *.rpm tar2rpm.1 depends
 	rm -f `find . -name '*~' -type f`
-
-
-
 

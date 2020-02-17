@@ -1,5 +1,16 @@
 .PHONY : all tar rpm clean
 
+RPMVER=$(shell git tag | tail -1)
+
+ifdef VER
+    RPMVER=$(VER)
+endif
+
+RPMREL=1
+ifneq ($(RPMVER), $(shell git describe))
+    RPMREL=$(shell date +%s)
+endif
+
 all :
 	@echo "make rpm ?"
 
@@ -18,7 +29,8 @@ tar : tar2rpm.1
 
 rpm : tar
 	echo 'Requires: rpm-build' > depends
-	sh tar2rpm.sh --name tar2rpm --ver 1.2 --dependfile depends \
+	sh tar2rpm.sh --name tar2rpm --ver $(RPMVER) --rel $(RPMREL) \
+	  --dependfile depends \
 	  --arch noarch \
 	  --packager "User Fullname <user.fullname@gmail.com>" \
 	  tar2rpm.tar.gz

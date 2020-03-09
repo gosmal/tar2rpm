@@ -1,7 +1,7 @@
 #!/bin/bash
 # ####################################################################
 #
-#       ID         : $Id: tar2rpm.sh,v 1.16 2019/02/28 16:48:49 gosta Exp $
+#       ID         : $Id: tar2rpm.sh,v 1.17 2020/03/09 18:18:38 gosta Exp $
 #       Written by : Gosta Malmstrom
 # 
 #       Comments:
@@ -153,7 +153,8 @@ cleanup()
 	test -n "$RPMSPEC" && rm -f "$RPMSPEC"
 	test -n "$BLDTOP" && rm -rf "$BLDTOP"
     fi
-    
+
+    test -d "$EMPTYDIR" && rmdir "$EMPTYDIR"
 }
 
 USAGE="tar2rpm: usage: tar2rpm [-n] [-v] [-k] [-p buildprefix] [-s specfilename] --name RPMNAME [--ver N.N] [--rel N] [--arch noarch/x86_64/i586] [--sign] [--packager Packager] [--dependfile file-with-depends] [--dirs file-with-list-of-directories] [--pre file] [--post file] [--preun file] [--postun file] [--defusr USER] [--defgrp GROUP] tarfile|directory"
@@ -162,6 +163,7 @@ USAGE="tar2rpm: usage: tar2rpm [-n] [-v] [-k] [-p buildprefix] [-s specfilename]
 # Parse parameters
 #
 
+EMPTYDIR=/tmp/tar2rpm.empty.$$
 DRYRUN=false
 VERBOSE=false
 BUILDPREFIX=/tmp/tar2rpm.$$
@@ -222,17 +224,26 @@ fi
 
 SOURCEDATA=$1
 SOURCEISDIR=false
+CPDIR='*'
 
-if [ ! -f "${SOURCEDATA}" ] ; then
-    if [ ! -d "${SOURCEDATA}" ] ; then
-	die Missing tarfile
-    else
-	SOURCEISDIR=true
-	if [ "${SOURCEDATA}" = "/" ] ; then
-	    die tar2rpm cant build from /
+if [ "${SOURCEDATA}" = "/dev/null" ] ; then
+    mkdir -p "$EMPTYDIR"
+    SOURCEDATA="$EMPTYDIR"
+    CPDIR='.'
+    SOURCEISDIR=true
+else
+    if [ ! -f "${SOURCEDATA}" ] ; then
+	if [ ! -d "${SOURCEDATA}" ] ; then
+	    die Missing tarfile
+	else
+	    SOURCEISDIR=true
+	    if [ "${SOURCEDATA}" = "/" ] ; then
+		die tar2rpm cant build from /
+	    fi
 	fi
     fi
 fi
+
 
 export BLDTOP=$BUILDPREFIX
 UNPACKROOT=$BLDTOP/BUILDROOT/${NAME}
@@ -328,7 +339,7 @@ This package is automatically built by tar2rpm.
 %build
 
 %install
-cd %{_builddir}/BUILDROOT/${NAME} ; find * | cpio $OPT_V -pdum  %{?buildroot} $OUTPUT
+cd %{_builddir}/BUILDROOT/${NAME} ; find $CPDIR | cpio $OPT_V -pdum  %{?buildroot} $OUTPUT
 
 # Disable all helpers in install
 #unset RPM_BUILD_ROOT

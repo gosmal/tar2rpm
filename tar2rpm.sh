@@ -1,7 +1,7 @@
 #!/bin/bash
 # ####################################################################
 #
-#       ID         : $Id: tar2rpm.sh,v 1.17 2020/03/09 18:18:38 gosta Exp $
+#       ID         : $Id: tar2rpm.sh,v 1.18 2020/03/10 05:38:24 gosta Exp $
 #       Written by : Gosta Malmstrom
 # 
 #       Comments:
@@ -75,10 +75,11 @@ tar2rpm --name RPMNAME tarfile
 
 =head1 DESCRIPTION
 
-tar2rpm creates a rpm from a tarfile. The tarfile is allowed to be compresed with gzip.
+tar2rpm creates a rpm from a tarfile. The tarfile is allowed to be compresed with gzip and should in that case have suffix of gz.
 If the argument tarfile is a directory tar2rpm assumes that this a location 
 with a directory tree to create the rpm. The directory should contain
-a filetree from root.
+a filetree from root. To make a virtual rpm (empty) tarfile should be set to
+/dev/null.
 
 The following parameter/options are required :
 
@@ -224,12 +225,12 @@ fi
 
 SOURCEDATA=$1
 SOURCEISDIR=false
-CPDIR='*'
+FINDPOINTS='*'
 
 if [ "${SOURCEDATA}" = "/dev/null" ] ; then
     mkdir -p "$EMPTYDIR"
     SOURCEDATA="$EMPTYDIR"
-    CPDIR='.'
+    FINDPOINTS='.'
     SOURCEISDIR=true
 else
     if [ ! -f "${SOURCEDATA}" ] ; then
@@ -339,7 +340,7 @@ This package is automatically built by tar2rpm.
 %build
 
 %install
-cd %{_builddir}/BUILDROOT/${NAME} ; find $CPDIR | cpio $OPT_V -pdum  %{?buildroot} $OUTPUT
+cd %{_builddir}/BUILDROOT/${NAME} ; find $FINDPOINTS | cpio $OPT_V -pdum  %{?buildroot} $OUTPUT
 
 # Disable all helpers in install
 #unset RPM_BUILD_ROOT

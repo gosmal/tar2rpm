@@ -1,4 +1,4 @@
-.PHONY : all tar rpm clean
+.PHONY : all tar rpm clean check
 
 RPMVER=$(shell git tag | tail -1)
 
@@ -35,6 +35,9 @@ rpm : tar
 	  --packager "User Fullname <user.fullname@gmail.com>" \
 	  tar2rpm.tar.gz
 
+
+check :
+	shellcheck -e SC2002 tar2rpm.sh
 
 clean :
 	rm -rf i586 i386 x86_64 noarch

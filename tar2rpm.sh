@@ -1,7 +1,7 @@
 #!/bin/bash
 # ####################################################################
 #
-#       ID         : $Id: tar2rpm.sh,v 1.18 2020/03/10 05:38:24 gosta Exp $
+#       ID         : $Id: tar2rpm.sh,v 1.19 2020/04/06 01:09:47 gosta Exp $
 #       Written by : Gosta Malmstrom
 # 
 #       Comments:
@@ -280,7 +280,7 @@ mkdir -p "$UNPACKROOT"
 if "$SOURCEISDIR" ; then
     (
 	cd "${SOURCEDATA}"
-	find . -type f | cpio $OPT_V -pdum "$UNPACKROOT" 2> /dev/null
+	find . ! -type d | cpio $OPT_V -pdum "$UNPACKROOT" 2> /dev/null
     )
 else
     RUNGZIP="cat"
@@ -356,7 +356,7 @@ EOF
 
 (
     cd "$UNPACKROOT"
-    find . -type f -print | sed 's/\.//'
+    find . ! -type d -print | sed 's/\.//'
     echo
 ) >> "$RPMSPEC"
 

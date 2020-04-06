@@ -22,6 +22,7 @@ tar : tar2rpm.1
 	mkdir -p usr/bin usr/share/man/man1
 	cp tar2rpm.sh usr/bin/tar2rpm
 	chmod +x usr/bin/*
+	cd usr/bin; ln -s tar2rpm tar2rpm.link
 	cp tar2rpm.1  usr/share/man/man1
 	gzip usr/share/man/man1/*
 	tar czvf tar2rpm.tar.gz usr

@@ -1,7 +1,7 @@
 #!/bin/bash
 # ####################################################################
 #
-#       ID         : $Id: tar2rpm.sh,v 1.19 2020/04/06 01:09:47 gosta Exp $
+#       ID         : $Id: tar2rpm.sh,v 1.20 2020/04/14 18:37:14 gosta Exp $
 #       Written by : Gosta Malmstrom
 # 
 #       Comments:
@@ -61,7 +61,7 @@ tar2rpm [-n] [-v] [-k] [-p buildprefix] [-s specfilename]
 
 tar2rpm [--ver N.N] [--rel N] [--arch noarch/x86_64/i586]
 
-tar2rpm [--sign] [--packager Packager] 
+tar2rpm [--sign] [--packager Packager] [--normalroot]
 
 tar2rpm [--dependfile file-with-depends]
 
@@ -107,6 +107,8 @@ The following parameter/options is accepted :
 
 --sign            Sign with PGP
 
+--normalroot      Use normal root. Ignore compress of info/man pages at %install
+
 --packager NAME   Builder name
 
 --dependfile file-with-depends provide a section of dependencies
@@ -148,6 +150,8 @@ die()
     exit 1
 }
 
+RET=0
+
 cleanup()
 {
     if ! $KEEP ; then
@@ -156,9 +160,11 @@ cleanup()
     fi
 
     test -d "$EMPTYDIR" && rmdir "$EMPTYDIR"
+
+    exit $RET
 }
 
-USAGE="tar2rpm: usage: tar2rpm [-n] [-v] [-k] [-p buildprefix] [-s specfilename] --name RPMNAME [--ver N.N] [--rel N] [--arch noarch/x86_64/i586] [--sign] [--packager Packager] [--dependfile file-with-depends] [--dirs file-with-list-of-directories] [--pre file] [--post file] [--preun file] [--postun file] [--defusr USER] [--defgrp GROUP] tarfile|directory"
+USAGE="tar2rpm: usage: tar2rpm [-n] [-v] [-k] [-p buildprefix] [-s specfilename] --name RPMNAME [--ver N.N] [--rel N] [--arch noarch/x86_64/i586] [--sign] [--packager Packager] [--normalroot] [--dependfile file-with-depends] [--dirs file-with-list-of-directories] [--pre file] [--post file] [--preun file] [--postun file] [--defusr USER] [--defgrp GROUP] tarfile|directory"
 
 #
 # Parse parameters
@@ -170,6 +176,7 @@ VERBOSE=false
 BUILDPREFIX=/tmp/tar2rpm.$$
 SPECFILENAME=""
 KEEP=false
+NORMALROOT=false
 SIGN=""
 PACKAGER="Config Manager<user.fullname@gmail.com>"
 NAME=""
@@ -200,6 +207,7 @@ do
 	--ver)  shift; VER=$1; shift;;
 	--rel)  shift; REL=$1; shift;;
 	--arch) shift; ARCH=$1; shift;;
+	--normalroot)	shift; NORMALROOT=true;;
 	--defusr) 	shift; DEFUSR=$1; shift;;
 	--defgrp) 	shift; DEFGRP=$1; shift;;
 	--dependfile)   shift; DEPENDFILE=$1; shift;;
@@ -342,8 +350,14 @@ This package is automatically built by tar2rpm.
 %install
 cd %{_builddir}/BUILDROOT/${NAME} ; find $FINDPOINTS | cpio $OPT_V -pdum  %{?buildroot} $OUTPUT
 
+EOF
+if "$NORMALROOT" ; then
+    cat <<EOF >> "$RPMSPEC" 
 # Disable all helpers in install
-#unset RPM_BUILD_ROOT
+unset RPM_BUILD_ROOT
+EOF
+fi
+cat <<EOF >> "$RPMSPEC" 
 
 %clean
 

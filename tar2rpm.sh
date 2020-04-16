@@ -1,7 +1,7 @@
 #!/bin/bash
 # ####################################################################
 #
-#       ID         : $Id: tar2rpm.sh,v 1.20 2020/04/14 18:37:14 gosta Exp $
+#       ID         : $Id: tar2rpm.sh,v 1.21 2020/04/16 08:47:44 gosta Exp $
 #       Written by : Gosta Malmstrom
 # 
 #       Comments:
@@ -161,6 +161,8 @@ cleanup()
 
     test -d "$EMPTYDIR" && rmdir "$EMPTYDIR"
 
+    trap '' 0
+    
     exit $RET
 }
 
@@ -301,11 +303,10 @@ fi
 
 if [ -n "$DIRSFILE" ] ; then
     if [ -f "$DIRSFILE" ] ; then
-	cat "$DIRSFILE" | 
 	(
 	    cd "${UNPACKROOT}"
 	    awk '/^[ 	]*$/ {next;} /^[ 	]*#/ {next;} /^[ 	]*%/ {next;}  
-	    		{printf "mkdir -p ./%s\n",$NF}' | sh
+	    		{printf "mkdir -p ./%s\n",$NF}' "$DIRSFILE" | sh
 	)
     else
         die Missing --dirs "$DIRSFILE" file
@@ -375,10 +376,10 @@ EOF
 ) >> "$RPMSPEC"
 
 if [ -n "$DIRSFILE" ] ; then
-    cat "$DIRSFILE" | awk '/^[ 	]*$/ {next;} /^[ 	]*#/ {next;} 
+    awk '/^[ 	]*$/ {next;} /^[ 	]*#/ {next;} 
 		/^[ 	]*%/ {print; next;}
 	        {printf "%%dir %s\n",$NF}
-		END {printf("\n");}' >> "$RPMSPEC"
+		END {printf("\n");}' "$DIRSFILE" >> "$RPMSPEC"
 fi
 
 if [ -n "$PRESCRIPT" ] ; then

@@ -1,7 +1,7 @@
 #!/bin/bash
 # ####################################################################
 #
-#       ID         : $Id: tar2rpm.sh,v 1.21 2020/04/16 08:47:44 gosta Exp $
+#       ID         : $Id: tar2rpm.sh,v 1.22 2020/04/16 12:03:00 gosta Exp $
 #       Written by : Gosta Malmstrom
 # 
 #       Comments:
@@ -306,8 +306,8 @@ if [ -n "$DIRSFILE" ] ; then
 	(
 	    cd "${UNPACKROOT}"
 	    awk '/^[ 	]*$/ {next;} /^[ 	]*#/ {next;} /^[ 	]*%/ {next;}  
-	    		{printf "mkdir -p ./%s\n",$NF}' "$DIRSFILE" | sh
-	)
+	    		{printf "mkdir -p ./%s\n",$NF}' | sh
+	) < "$DIRSFILE"
     else
         die Missing --dirs "$DIRSFILE" file
     fi
